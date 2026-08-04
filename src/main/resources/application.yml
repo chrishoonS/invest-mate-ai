@@ -1,3 +1,27 @@
 spring:
   application:
     name: invest-mate-ai
+
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration
+
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://localhost:5432/invest_ai_local
+    username: invest_ai
+    password: Investai12!@
+
+mybatis:
+  ## mapper 파일 경로
+  mapper-locations: classpath:/mapper/**/*.xml
+  ## vo 파일 경로
+  type-aliases-package: com.example.invest_mate_ai
+  configuration:
+    map-underscore-to-camel-case: true
+
+logging:
+  pattern:
+    console: "[%d{yyyy-MM-dd HH:mm:ss.SSS}] %-5level %logger{36} - %msg%n"
+  level:
+    com.example.invest_mate_ai: DEBUG

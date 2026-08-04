@@ -7,4 +7,6 @@ import org.apache.ibatis.annotations.Mapper;
 public interface UserMapper {
 
     UserVo findById(Long id);
+
+    String test();
 }
