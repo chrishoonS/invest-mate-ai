@@ -1,6 +1,7 @@
 HELP.md
 .gradle
 build/
+caches/
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/
@@ -42,3 +43,19 @@ out/
 # OS-specific files
 .DS_Store
 Thumbs.db
+
+# Gradle build artifacts
+.gradle/
+**/*.bin
+**/*.lock
+**/*.marker
+**/*.class
+**/*.jar
+**/*.pom
+**/*.module
+
+# Gradle test logs
+**/results.bin
+**/metadata.bin
+**/instrumentation-*.bin
+**/descriptor.bin
