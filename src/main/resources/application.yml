@@ -26,11 +26,29 @@ logging:
   level:
     com.example.invest_mate_ai: DEBUG
 
-google:
-  oauth:
+oauth:
+  google:
     client-id: ${GOOGLE_CLIENT_ID}
     client-secret: ${GOOGLE_CLIENT_SECRET}
     redirect-uri: http://localhost:8080/auth/oauth2/google/callback
     google-auth-uri: https://accounts.google.com/o/oauth2/v2/auth
     token-api-uri: https://oauth2.googleapis.com/token
     user-info-uri: https://oauth2.googleapis.com/tokeninfo
+
+  kakao:
+    client-id: ${KAKAO_CLIENT_ID}
+    client-secret: ${KAKAO_CLIENT_SECRET}
+    redirect-uri: http://localhost:8080/auth/oauth2/kakao/callback
+    auth-uri: https://kauth.kakao.com/oauth/authorize
+    token-uri: https://kauth.kakao.com/oauth/token
+    user-info-uri: https://kapi.kakao.com/v2/user/me
+
+  naver:
+    client-id: ${NAVER_CLIENT_ID}
+    client-secret: ${NAVER_CLIENT_SECRET}
+    redirect-uri: http://localhost:8080/auth/oauth2/naver/callback
+    auth-uri: https://nid.naver.com/oauth2.0/authorize
+    token-uri: https://nid.naver.com/oauth2.0/token
+    user-info-uri: https://openapi.naver.com/v1/nid/me
+
+

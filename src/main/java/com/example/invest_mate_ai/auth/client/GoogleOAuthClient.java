@@ -12,26 +12,27 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
 
 @Component
 public class GoogleOAuthClient implements OAuthClient {
 
-    @Value("${google.oauth.client-id}")
+    @Value("${oauth.google.client-id}")
     private String googleClientId;
 
-    @Value("${google.oauth.client-secret}")
+    @Value("${oauth.google.client-secret}")
     private String googleClientSecret;
 
-    @Value("${google.oauth.redirect-uri}")
+    @Value("${oauth.google.redirect-uri}")
     private String redirectUri;
 
-    @Value("${google.oauth.google-auth-uri}")
+    @Value("${oauth.google.google-auth-uri}")
     private String googleAuthUri;
 
-    @Value("${google.oauth.token-api-uri}")
+    @Value("${oauth.google.token-api-uri}")
     private String tokenApiUri;
 
-    @Value("${google.oauth.user-info-uri}")
+    @Value("${oauth.google.user-info-uri}")
     private String userInfoUri;
 
     private final RestTemplate restTemplate;
@@ -43,10 +44,17 @@ public class GoogleOAuthClient implements OAuthClient {
     @Override
     public String createAuthorizationUrl() {
 
-        return googleAuthUri + "?client_id=" + googleClientId
-                + "&redirect_uri=" + redirectUri
-                + "&response_type=code"
-                + "&scope=email%20profile%20openid";
+        return UriComponentsBuilder
+                .fromUriString(googleAuthUri)
+                .queryParam("response_type", "code")
+                .queryParam("client_id", googleClientId)
+                .queryParam("redirect_uri", redirectUri)
+                .queryParam("response_type", "code")
+                .queryParam("scope", "email%20profile%20openid")
+                .build()
+                .encode()
+                .toUriString();
+
     }
 
     @Override
