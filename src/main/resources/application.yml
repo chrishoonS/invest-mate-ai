@@ -28,8 +28,10 @@ logging:
 
 google:
   oauth:
-    client-id: 657975510865-5cpads4vve566999brrublhev328ujqt.apps.googleusercontent.com
-    client-secret: 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
+#    client-id: 657975510865-5cpads4vve566999brrublhev328ujqt.apps.googleusercontent.com
+#    client-secret: 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
+    client-id: ${GOOGLE_CLIENT_ID}
+    client-secret: ${GOOGLE_CLIENT_SECRET}
     redirect-uri: http://localhost:8080/auth/oauth2/google/callback
     google-auth-uri: https://accounts.google.com/o/oauth2/v2/auth
     token-api-uri: https://oauth2.googleapis.com/token
