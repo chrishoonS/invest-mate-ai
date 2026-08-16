@@ -95,6 +95,8 @@ public class GoogleOAuthClient implements OAuthClient {
                 .provider(OAuthProvider.GOOGLE)
                 .providerId(googleUser.getSub())
                 .email(googleUser.getEmail())
+                .name(googleUser.getName())
+                .nickname(googleUser.getGiven_name())
                 .build();
 
     }

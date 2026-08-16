@@ -1,25 +1,29 @@
-package com.example.invest_mate_ai.user.vo;
+package com.example.invest_mate_ai.user.dto.response;
 
 import com.example.invest_mate_ai.user.type.UserRole;
 import com.example.invest_mate_ai.user.type.UserStatus;
 import lombok.Builder;
 import lombok.Getter;
-import lombok.Setter;
 
 import java.time.LocalDateTime;
 
 @Getter
-@Setter
 @Builder
-public class UserVo {
+public class UserResponse {
 
     private Long id;
-    private String name;
-    private String nickname;
-    private String email;
-    private UserRole role;
-    private UserStatus userStatus;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
 
+    private String name;
+
+    private String nickname;
+
+    private String email;
+
+    private UserRole userRole;
+
+    private UserStatus userStatus;
+
+    private LocalDateTime createdAt;
+
+    private LocalDateTime updatedAt;
 }
