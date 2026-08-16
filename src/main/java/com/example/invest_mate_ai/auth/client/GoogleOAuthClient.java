@@ -46,11 +46,10 @@ public class GoogleOAuthClient implements OAuthClient {
 
         return UriComponentsBuilder
                 .fromUriString(googleAuthUri)
-                .queryParam("response_type", "code")
                 .queryParam("client_id", googleClientId)
                 .queryParam("redirect_uri", redirectUri)
                 .queryParam("response_type", "code")
-                .queryParam("scope", "email%20profile%20openid")
+                .queryParam("scope", "email profile openid")
                 .build()
                 .encode()
                 .toUriString();
