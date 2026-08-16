@@ -27,7 +27,10 @@
              , updated_at
           FROM users
          WHERE id = #{id}
-           AND status <![CDATA[ <> ]]> 'WITHDRAW'
+    </select>
+
+    <select id="test" resultType="String">
+        SELECT 'PostgreSQL Connected'
     </select>
 
 </mapper>
