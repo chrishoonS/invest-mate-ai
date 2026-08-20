@@ -10,10 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/test")
 @RequiredArgsConstructor
 public class TestController {
+
     private final UserMapper userMapper;
 
-    @GetMapping("/db")
-    public String testDb() {
-        return userMapper.test();
-    }
 }

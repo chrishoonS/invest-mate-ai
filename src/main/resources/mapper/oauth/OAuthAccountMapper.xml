@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.invest_mate_ai.auth.mapper.OAuthAccountMapper">
+
+    <select id="findByProviderInfo" resultType="com.example.invest_mate_ai.auth.vo.OAuthAccount">
+
+        SELECT id
+             , user_id
+             , provider
+             , provider_id
+             , created_at
+          FROM oauth_account
+         WHERE provider = #{provider}
+           AND provider_id = #{providerId}
+
+    </select>
+
+
+    <insert id="insertOAuthAccount" parameterType="com.example.invest_mate_ai.auth.vo.OAuthAccount"
+            useGeneratedKeys="true"
+            keyProperty="id"
+            keyColumn="id">
+
+        INSERT INTO oauth_account (
+                  user_id
+                , provider
+                , provider_id
+                , provider_email
+                , provider_name
+                , provider_nickname
+        )
+        VALUES (
+                  #{userId}
+                , #{provider}
+                , #{providerId}
+                , #{providerEmail}
+                , #{providerName}
+                , #{providerNickname}
+        )
+
+    </insert>
+
+</mapper>

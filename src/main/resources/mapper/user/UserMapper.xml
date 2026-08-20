@@ -19,8 +19,9 @@
 
     <select id="findById" parameterType="long" resultMap="UserResultMap">
         SELECT id
-             , email
+             , name
              , nickname
+             , email
              , role
              , user_status
              , created_at
@@ -29,8 +30,39 @@
          WHERE id = #{id}
     </select>
 
-    <select id="test" resultType="String">
-        SELECT 'PostgreSQL Connected'
-    </select>
+    <insert id="insertUsers" parameterType="com.example.invest_mate_ai.user.vo.UserVo"
+            useGeneratedKeys="true"
+            keyProperty="id"
+            keyColumn="id">
+
+        INSERT INTO users (
+                             name
+                           , nickname
+                           , email
+                           , role
+                           , user_status
+        )
+        VALUES (
+                  #{name}
+                , #{nickname}
+                , #{email}
+                , #{userRole}
+                , #{userStatus}
+        )
+    </insert>
+
+    <update id="updateUsers">
+        UPDATE users
+           SET nickname = #{request.nickname}
+             , updated_at = CURRENT_TIMESTAMP
+         WHERE id = #{request.id}
+    </update>
+
+    <update id="updateUserStatus">
+        UPDATE users
+           SET user_status = #{userStatus}
+             , updated_at = CURRENT_TIMESTAMP
+         WHERE id = #{userId}
+    </update>
 
 </mapper>
