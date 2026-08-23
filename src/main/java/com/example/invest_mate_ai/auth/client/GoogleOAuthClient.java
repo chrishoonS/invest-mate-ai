@@ -5,17 +5,26 @@ import com.example.invest_mate_ai.auth.dto.response.OAuthTokenResponse;
 import com.example.invest_mate_ai.auth.dto.response.OAuthUserInfo;
 import com.example.invest_mate_ai.auth.type.OAuthProvider;
 import com.example.invest_mate_ai.auth.dto.request.GoogleRequest;
+import com.example.invest_mate_ai.common.exception.BusinessException;
+import com.example.invest_mate_ai.common.exception.ErrorCode;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 @Component
 public class GoogleOAuthClient implements OAuthClient {
+
+    @Override
+    public OAuthProvider provider() {
+        return OAuthProvider.GOOGLE;
+    }
 
     @Value("${oauth.google.client-id}")
     private String googleClientId;
@@ -35,10 +44,10 @@ public class GoogleOAuthClient implements OAuthClient {
     @Value("${oauth.google.user-info-uri}")
     private String userInfoUri;
 
-    private final RestTemplate restTemplate;
+    private final RestClient restClient;
 
-    public GoogleOAuthClient(RestTemplate restTemplate) {
-        this.restTemplate = restTemplate;
+    public GoogleOAuthClient(RestClient restClient) {
+        this.restClient = restClient;
     }
 
     @Override
@@ -59,45 +68,73 @@ public class GoogleOAuthClient implements OAuthClient {
     @Override
     public OAuthTokenResponse getAccessToken(String authCode) {
 
-        // Google Token API 호출
+        if (authCode == null || authCode.isBlank()) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        }
+
         GoogleRequest googleReq = GoogleRequest.builder()
                 .clientId(googleClientId)
                 .clientSecret(googleClientSecret)
                 .code(authCode)
                 .redirectUri(redirectUri)
-                .grantType("authorization_code").build();
+                .grantType("authorization_code")
+                .build();
 
-        ResponseEntity<OAuthTokenResponse> response =
-                restTemplate.postForEntity(tokenApiUri, googleReq, OAuthTokenResponse.class);
+        try {
+            OAuthTokenResponse response = restClient.post()
+                    .uri(tokenApiUri)
+                    .body(googleReq)
+                    .retrieve()
+                    .body(OAuthTokenResponse.class);
 
-        return response.getBody();
+            if (response == null
+                    || response.getAccessToken() == null
+                    || response.getAccessToken().isBlank()) {
+                throw new BusinessException(ErrorCode.IDENTITY_VERIFICATION_FAILED);
+            }
+
+            return response;
+
+        } catch (BusinessException e) {
+            throw e;
+        } catch (RestClientException e) {
+            throw new BusinessException(ErrorCode.OAUTH_PROVIDER_FAILURE);
+        }
     }
 
     @Override
     public OAuthUserInfo getUserInfo(String accessToken) {
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(accessToken);
+        if (accessToken == null || accessToken.isBlank()) {
+            throw new BusinessException(ErrorCode.IDENTITY_VERIFICATION_FAILED);
+        }
 
-        HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
+        try {
+            GoogleUserResponse googleUser = restClient.get()
+                    .uri(userInfoUri)
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                    .retrieve()
+                    .body(GoogleUserResponse.class);
 
-        ResponseEntity<GoogleUserResponse> response =
-                restTemplate.exchange(
-                        userInfoUri,
-                        HttpMethod.GET,
-                        requestEntity,
-                        GoogleUserResponse.class
-                );
+            if (googleUser == null
+                    || googleUser.getSub() == null
+                    || googleUser.getSub().isBlank()) {
+                throw new BusinessException(ErrorCode.IDENTITY_VERIFICATION_FAILED);
+            }
 
-        GoogleUserResponse googleUser = response.getBody();
+            return OAuthUserInfo.builder()
+                    .provider(OAuthProvider.GOOGLE)
+                    .providerId(googleUser.getSub())
+                    .email(googleUser.getEmail())
+                    .name(googleUser.getName())
+                    .nickname(googleUser.getGiven_name())
+                    .build();
 
-        return OAuthUserInfo.builder()
-                .provider(OAuthProvider.GOOGLE)
-                .providerId(googleUser.getSub())
-                .email(googleUser.getEmail())
-                .name(googleUser.getName())
-                .nickname(googleUser.getGiven_name())
-                .build();
+        } catch (BusinessException e) {
+            throw e;
+        } catch (RestClientException e) {
+            throw new BusinessException(ErrorCode.OAUTH_PROVIDER_FAILURE);
+        }
 
     }
 }
