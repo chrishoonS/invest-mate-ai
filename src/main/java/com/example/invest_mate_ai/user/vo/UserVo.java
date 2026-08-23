@@ -17,6 +17,7 @@ public class UserVo {
     private String name;
     private String nickname;
     private String email;
+    private String identityKey;
     private UserRole userRole;
     private UserStatus userStatus;
     private LocalDateTime createdAt;

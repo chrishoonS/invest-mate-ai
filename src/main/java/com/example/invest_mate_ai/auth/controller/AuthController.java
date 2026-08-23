@@ -3,6 +3,7 @@ package com.example.invest_mate_ai.auth.controller;
 import com.example.invest_mate_ai.auth.dto.response.OAuthLoginResponse;
 import com.example.invest_mate_ai.auth.service.OAuthService;
 import com.example.invest_mate_ai.auth.type.OAuthProvider;
+import com.example.invest_mate_ai.identity.dto.request.IdentityVerifyRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -32,5 +33,12 @@ public class AuthController {
         OAuthLoginResponse response = oauthService.login(oauthProvider, code);
 
         return ResponseEntity.ok(response);
+    }
+
+    // OAuth 콜백 이후 Mock PASS 결과로 새 OAuth 계정 연결
+    @PostMapping("/oauth2/identity/verify")
+    public ResponseEntity<OAuthLoginResponse> verifyIdentity(@RequestParam String pendingLoginId,
+                                                              @RequestBody IdentityVerifyRequest request) {
+        return ResponseEntity.ok(oauthService.verifyIdentity(pendingLoginId, request));
     }
 }

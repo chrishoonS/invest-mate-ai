@@ -7,6 +7,7 @@ import com.example.invest_mate_ai.auth.type.OAuthProvider;
 import com.example.invest_mate_ai.auth.vo.OAuthAccount;
 import com.example.invest_mate_ai.common.exception.BusinessException;
 import com.example.invest_mate_ai.common.exception.ErrorCode;
+import com.example.invest_mate_ai.identity.dto.response.IdentityInfo;
 import com.example.invest_mate_ai.user.dto.request.UserUpdateRequest;
 import com.example.invest_mate_ai.user.dto.response.UserResponse;
 import com.example.invest_mate_ai.user.mapper.UserMapper;
@@ -27,28 +28,42 @@ public class UserServiceImpl implements UserService {
     private final OAuthAccountMapper oauthAccountMapper;
 
     @Override
-    public OAuthLoginResponse loginOrRegister(OAuthUserInfo oauthUserInfo) {
+    public OAuthLoginResponse findLoginResponse(OAuthUserInfo oauthUserInfo) {
         OAuthProvider provider = oauthUserInfo.getProvider();
         String providerId = oauthUserInfo.getProviderId();
         OAuthAccount account = oauthAccountMapper.findByProviderInfo(provider, providerId);
 
-        if (account != null) {
-            UserVo user = userMapper.findById(account.getUserId());
-            return OAuthLoginResponse.builder()
-                    .registered(true)
-                    .message("이미 인증된 회원입니다.")
-                    .userId(user.getId())
-                    .build();
+        if (account == null) {
+            return null;
+        }
+        UserVo user = userMapper.findById(account.getUserId());
+        if (user == null) {
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+        }
+        return createLoginResponse(true, "이미 인증된 회원입니다.", user.getId());
+    }
+
+    // 변경: OAuth 계정이 새로워도 identityKey가 같으면 기존 users에 계정을 연결한다.
+    @Override
+    public OAuthLoginResponse loginOrRegister(OAuthUserInfo oauthUserInfo, IdentityInfo identityInfo) {
+        OAuthLoginResponse existingLogin = findLoginResponse(oauthUserInfo);
+        if (existingLogin != null) {
+            return existingLogin;
         }
 
-        UserVo user = UserVo.builder()
-                .name(oauthUserInfo.getName())
-                .nickname(oauthUserInfo.getNickname())
-                .email(oauthUserInfo.getEmail())
-                .userRole(UserRole.USER)
-                .userStatus(UserStatus.ACTIVE)
-                .build();
-        userMapper.insertUsers(user);
+        UserVo user = userMapper.findByIdentityKey(identityInfo.getIdentityKey());
+        boolean existingUser = user != null;
+        if (!existingUser) {
+            user = UserVo.builder()
+                    .name(oauthUserInfo.getName())
+                    .nickname(oauthUserInfo.getNickname())
+                    .email(oauthUserInfo.getEmail())
+                    .identityKey(identityInfo.getIdentityKey())
+                    .userRole(UserRole.USER)
+                    .userStatus(UserStatus.ACTIVE)
+                    .build();
+            userMapper.insertUsers(user);
+        }
 
         OAuthAccount oauthAccount = OAuthAccount.builder()
                 .userId(user.getId())
@@ -60,11 +75,8 @@ public class UserServiceImpl implements UserService {
                 .build();
         oauthAccountMapper.insertOAuthAccount(oauthAccount);
 
-        return OAuthLoginResponse.builder()
-                .registered(false)
-                .message("회원가입이 완료되었습니다.")
-                .userId(user.getId())
-                .build();
+        String message = existingUser ? "기존 회원 계정이 연결되었습니다." : "회원가입이 완료되었습니다.";
+        return createLoginResponse(existingUser, message, user.getId());
     }
 
     @Override
@@ -109,6 +121,14 @@ public class UserServiceImpl implements UserService {
                 .userStatus(user.getUserStatus())
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
+                .build();
+    }
+
+    private OAuthLoginResponse createLoginResponse(boolean registered, String message, Long userId) {
+        return OAuthLoginResponse.builder()
+                .registered(registered)
+                .message(message)
+                .userId(userId)
                 .build();
     }
 }
