@@ -1,7 +1,6 @@
 package com.example.invest_mate_ai.auth.service.impl;
 
 import com.example.invest_mate_ai.auth.client.OAuthClient;
-import com.example.invest_mate_ai.auth.client.OAuthClientRegistry;
 import com.example.invest_mate_ai.auth.dto.response.OAuthLoginResponse;
 import com.example.invest_mate_ai.auth.dto.response.OAuthTokenResponse;
 import com.example.invest_mate_ai.auth.dto.response.OAuthUserInfo;
@@ -13,24 +12,37 @@ import com.example.invest_mate_ai.identity.dto.request.IdentityVerifyRequest;
 import com.example.invest_mate_ai.identity.dto.response.IdentityInfo;
 import com.example.invest_mate_ai.identity.service.IdentityService;
 import com.example.invest_mate_ai.user.service.UserService;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Service
-@RequiredArgsConstructor
 public class OAuthServiceImpl implements OAuthService {
 
-    private final OAuthClientRegistry clientRegistry;
     private final UserService userService;
     private final IdentityService identityService;
     // OAuth 콜백과 별도 본인인증 요청을 연결하는 단기 저장소
     private final Map<String, PendingOAuthLogin> pendingLogins = new ConcurrentHashMap<>();
+
+    // List<OAuthClient>로 생성자 주입/보관
+    private final List<OAuthClient> oauthClients;
+
+    public OAuthServiceImpl(List<OAuthClient> oauthClients,
+                            UserService userService,
+                            IdentityService identityService) {
+        // provider 중복 검사
+        validateUniqueProviders(oauthClients);
+        this.oauthClients = List.copyOf(oauthClients);
+        this.userService = userService;
+        this.identityService = identityService;
+    }
 
     @Override
     public String createLoginUrl(OAuthProvider provider) {
@@ -75,7 +87,19 @@ public class OAuthServiceImpl implements OAuthService {
     }
 
     private OAuthClient getClient(OAuthProvider provider) {
-        return clientRegistry.get(provider);
+        return oauthClients.stream()
+                .filter(client -> client.provider() == provider)
+                .findFirst()
+                .orElseThrow(() -> new BusinessException(ErrorCode.UNSUPPORTED_OAUTH_PROVIDER));
+    }
+
+    private void validateUniqueProviders(List<OAuthClient> oauthClients) {
+        Set<OAuthProvider> providers = new HashSet<>();
+        for (OAuthClient oauthClient : oauthClients) {
+            if (!providers.add(oauthClient.provider())) {
+                throw new IllegalStateException("동일 OAuth Provider의 클라이언트가 중복 등록되었습니다: " + oauthClient.provider());
+            }
+        }
     }
 
     private PendingOAuthLogin getPendingLogin(String pendingLoginId) {
