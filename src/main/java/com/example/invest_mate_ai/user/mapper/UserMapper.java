@@ -10,6 +10,8 @@ public interface UserMapper {
 
     UserVo findById(Long id);
 
+    UserVo findByIdentityKey(String identityKey);
+
     void updateUsers(UserUpdateRequest request);
 
     int insertUsers(UserVo user);
