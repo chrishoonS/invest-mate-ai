@@ -2,6 +2,8 @@ package com.example.invest_mate_ai.stock.client;
 
 import com.example.invest_mate_ai.common.exception.BusinessException;
 import com.example.invest_mate_ai.common.exception.ErrorCode;
+import com.example.invest_mate_ai.stock.client.request.DartDisclosureRequest;
+import com.example.invest_mate_ai.stock.client.request.DartFinancialRequest;
 import com.example.invest_mate_ai.stock.calculator.FinancialMetricCalculator;
 import com.example.invest_mate_ai.stock.dto.response.StockDisclosureResponse;
 import com.example.invest_mate_ai.stock.dto.response.StockFinancialResponse;
@@ -24,7 +26,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Predicate;
 
-/** OpenDART의 공시 목록과 단일회사 전체 재무제표를 내부 모델로 변환합니다. */
 @Component
 @RequiredArgsConstructor
 public class OpenDartDisclosureClient implements DisclosureClient {
@@ -50,18 +51,13 @@ public class OpenDartDisclosureClient implements DisclosureClient {
             int limit
     ) {
         validateConfiguration();
-        int pageCount = Math.max(1, Math.min(limit, 100));
+        DartDisclosureRequest request = new DartDisclosureRequest(corporationCode, from, to, limit);
 
         try {
             DartDisclosureApiResponse response = restClient.get()
                     .uri(baseUri + "/list.json", uriBuilder -> uriBuilder
                             .queryParam("crtfc_key", apiKey)
-                            .queryParam("corp_code", corporationCode)
-                            .queryParam("bgn_de", from.format(DART_DATE))
-                            .queryParam("end_de", to.format(DART_DATE))
-                            .queryParam("page_count", pageCount)
-                            .queryParam("sort", "date")
-                            .queryParam("sort_mth", "desc")
+                            .queryParams(request.queryParameters())
                             .build())
                     .retrieve()
                     .body(DartDisclosureApiResponse.class);
@@ -87,16 +83,13 @@ public class OpenDartDisclosureClient implements DisclosureClient {
             DartReportCode reportCode
     ) {
         validateConfiguration();
+        DartFinancialRequest request = new DartFinancialRequest(corporationCode, businessYear, reportCode);
 
         try {
             DartFinancialApiResponse response = restClient.get()
                     .uri(baseUri + "/fnlttSinglAcntAll.json", uriBuilder -> uriBuilder
                             .queryParam("crtfc_key", apiKey)
-                            .queryParam("corp_code", corporationCode)
-                            .queryParam("bsns_year", businessYear)
-                            .queryParam("reprt_code", reportCode.getCode())
-                            // 연결재무제표를 우선 기준으로 삼아 종속기업을 포함한 기업 전체를 평가합니다.
-                            .queryParam("fs_div", "CFS")
+                            .queryParams(request.queryParameters())
                             .build())
                     .retrieve()
                     .body(DartFinancialApiResponse.class);

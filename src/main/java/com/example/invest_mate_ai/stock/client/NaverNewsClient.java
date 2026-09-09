@@ -2,6 +2,7 @@ package com.example.invest_mate_ai.stock.client;
 
 import com.example.invest_mate_ai.common.exception.BusinessException;
 import com.example.invest_mate_ai.common.exception.ErrorCode;
+import com.example.invest_mate_ai.stock.client.request.NaverNewsRequest;
 import com.example.invest_mate_ai.stock.calculator.NewsSentimentCalculator;
 import com.example.invest_mate_ai.stock.dto.response.StockNewsResponse;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -25,8 +26,6 @@ import java.util.List;
 @RequiredArgsConstructor
 public class NaverNewsClient implements NewsClient {
 
-    private static final int MAX_DISPLAY = 100;
-
     private final RestClient restClient;
     private final NewsSentimentCalculator sentimentCalculator;
 
@@ -42,15 +41,12 @@ public class NaverNewsClient implements NewsClient {
     @Override
     public List<StockNewsResponse> search(String companyName, int limit) {
         validateConfiguration();
-        int display = Math.max(1, Math.min(limit, MAX_DISPLAY));
+        NaverNewsRequest request = new NaverNewsRequest(companyName, limit);
 
         try {
             NaverNewsApiResponse response = restClient.get()
                     .uri(newsUri, uriBuilder -> uriBuilder
-                            // 일반 단어와 종목명이 겹치는 오탐을 줄이기 위해 주식 문맥을 함께 검색
-                            .queryParam("query", companyName + " 주식")
-                            .queryParam("display", display)
-                            .queryParam("sort", "date")
+                            .queryParams(request.queryParameters())
                             .build())
                     .header("X-Naver-Client-Id", clientId)
                     .header("X-Naver-Client-Secret", clientSecret)
@@ -80,7 +76,6 @@ public class NaverNewsClient implements NewsClient {
                 .build();
     }
 
-    /** 네이버 결과의 강조 태그와 HTML 엔티티를 API 소비자가 받지 않도록 제거. */
     private String cleanHtml(String value) {
         if (value == null) {
             return null;
@@ -92,7 +87,6 @@ public class NaverNewsClient implements NewsClient {
         try {
             return value == null ? null : OffsetDateTime.parse(value, DateTimeFormatter.RFC_1123_DATE_TIME);
         } catch (DateTimeParseException exception) {
-            // 공급자의 날짜 형식이 일시적으로 달라져도 뉴스 전체 조회를 실패시키지 않습니다.
             return null;
         }
     }
