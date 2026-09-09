@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.invest_mate_ai.stock.mapper.StockMapper">
+
+    <!-- DB 컬럼과 StockVo 필드를 명시적으로 연결해 스키마 변경 영향을 확인하기 쉽게 합니다. -->
+    <resultMap id="StockResultMap" type="com.example.invest_mate_ai.stock.vo.StockVo">
+        <id property="id" column="id"/>
+        <result property="stockCode" column="stock_code"/>
+        <result property="stockName" column="stock_name"/>
+        <result property="market" column="market"/>
+        <result property="corpCode" column="corp_code"/>
+        <result property="industryCode" column="industry_code"/>
+        <result property="industry" column="industry"/>
+        <result property="stockStatus" column="stock_status"/>
+        <result property="listedAt" column="listed_at"/>
+        <result property="delistedAt" column="delisted_at"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <sql id="StockColumns">
+        id, stock_code, stock_name, market, corp_code, industry_code, industry,
+        stock_status, listed_at, delisted_at, created_at, updated_at
+    </sql>
+
+    <select id="findById" resultMap="StockResultMap">
+        SELECT <include refid="StockColumns"/> FROM stock WHERE id = #{id}
+    </select>
+
+    <select id="findByMarketAndCode" resultMap="StockResultMap">
+        SELECT <include refid="StockColumns"/>
+        FROM stock
+        WHERE market = #{market} AND stock_code = #{stockCode}
+    </select>
+
+    <select id="search" resultMap="StockResultMap">
+        SELECT <include refid="StockColumns"/>
+        FROM stock
+        <where>
+            <if test="keyword != null and keyword != ''">
+                (stock_name ILIKE '%' || #{keyword} || '%' OR stock_code LIKE #{keyword} || '%')
+            </if>
+            <if test="market != null">AND market = #{market}</if>
+        </where>
+        ORDER BY stock_name, stock_code
+        LIMIT #{limit}
+    </select>
+
+    <insert id="insertStock" parameterType="com.example.invest_mate_ai.stock.vo.StockVo"
+            useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+        INSERT INTO stock
+        (
+            stock_code
+          , stock_name
+          , market
+          , corp_code
+          , industry_code
+          , industry
+          , stock_status
+          , listed_at
+          , delisted_at
+        ) VALUES (
+            #{stockCode}
+          , #{stockName}
+          , #{market}
+          , #{corpCode}
+          , #{industryCode}
+          , #{industry}
+          , #{stockStatus}
+          , #{listedAt}
+          , #{delistedAt}
+        )
+    </insert>
+
+    <update id="updateStock" parameterType="com.example.invest_mate_ai.stock.vo.StockVo">
+        UPDATE stock
+        SET stock_name = #{stockName},
+            corp_code = #{corpCode},
+            industry_code = #{industryCode},
+            industry = #{industry},
+            stock_status = #{stockStatus},
+            listed_at = #{listedAt},
+            delisted_at = #{delistedAt},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteStock">
+        DELETE FROM stock WHERE id = #{id}
+    </delete>
+</mapper>

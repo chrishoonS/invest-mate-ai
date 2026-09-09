@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.invest_mate_ai.stock.mapper.StockDataMapper">
+
+    <!-- 일봉은 stock_id + trading_date 기준으로 멱등하게 저장합니다. -->
+    <insert id="upsertDailyPrice" parameterType="com.example.invest_mate_ai.stock.vo.StockDailyPriceVo">
+        INSERT INTO stock_daily_price (
+            stock_id, trading_date, open_price, high_price, low_price, close_price,
+            adjusted_close, volume, trading_value, market_cap
+        ) VALUES (
+            #{stockId}, #{tradingDate}, #{openPrice}, #{highPrice}, #{lowPrice}, #{closePrice},
+            #{adjustedClose}, #{volume}, #{tradingValue}, #{marketCap}
+        )
+        ON CONFLICT (stock_id, trading_date) DO UPDATE SET
+            open_price = EXCLUDED.open_price, high_price = EXCLUDED.high_price,
+            low_price = EXCLUDED.low_price, close_price = EXCLUDED.close_price,
+            adjusted_close = EXCLUDED.adjusted_close, volume = EXCLUDED.volume,
+            trading_value = EXCLUDED.trading_value, market_cap = EXCLUDED.market_cap,
+            updated_at = CURRENT_TIMESTAMP
+    </insert>
+
+    <select id="findDailyPrices" resultType="com.example.invest_mate_ai.stock.vo.StockDailyPriceVo">
+        SELECT * FROM stock_daily_price
+        WHERE stock_id = #{stockId} AND trading_date BETWEEN #{from} AND #{to}
+        ORDER BY trading_date DESC
+    </select>
+
+    <delete id="deleteDailyPrice">
+        DELETE FROM stock_daily_price WHERE stock_id = #{stockId} AND trading_date = #{tradingDate}
+    </delete>
+
+    <!-- 같은 종목의 동일 content_hash 뉴스는 갱신하여 재수집 시 중복 행을 만들지 않습니다. -->
+    <insert id="upsertNews" parameterType="com.example.invest_mate_ai.stock.vo.StockNewsVo">
+        INSERT INTO stock_news (
+            stock_id, title, summary, original_url, source_url, source_name, published_at,
+            sentiment, sentiment_score, content_hash
+        ) VALUES (
+            #{stockId}, #{title}, #{summary}, #{originalUrl}, #{sourceUrl}, #{sourceName}, #{publishedAt},
+            #{sentiment}, #{sentimentScore}, #{contentHash}
+        )
+        ON CONFLICT (stock_id, content_hash) DO UPDATE SET
+            title = EXCLUDED.title, summary = EXCLUDED.summary,
+            original_url = EXCLUDED.original_url, source_url = EXCLUDED.source_url,
+            source_name = EXCLUDED.source_name, published_at = EXCLUDED.published_at,
+            sentiment = EXCLUDED.sentiment, sentiment_score = EXCLUDED.sentiment_score,
+            collected_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+    </insert>
+
+    <select id="findRecentNews" resultType="com.example.invest_mate_ai.stock.vo.StockNewsVo">
+        SELECT * FROM stock_news
+        WHERE stock_id = #{stockId}
+        ORDER BY published_at DESC NULLS LAST, id DESC
+        LIMIT #{limit}
+    </select>
+
+    <delete id="deleteNews">DELETE FROM stock_news WHERE id = #{id} AND stock_id = #{stockId}</delete>
+
+    <!-- DART 접수번호는 전역 고유값이므로 공시 재수집 시 기존 행을 갱신합니다. -->
+    <insert id="upsertDisclosure" parameterType="com.example.invest_mate_ai.stock.vo.StockDisclosureVo">
+        INSERT INTO stock_disclosure (
+            stock_id, receipt_number, report_name, submitter_name, event_type,
+            detail_url, received_at, analyzed_summary
+        ) VALUES (
+            #{stockId}, #{receiptNumber}, #{reportName}, #{submitterName}, #{eventType},
+            #{detailUrl}, #{receivedAt}, #{analyzedSummary}
+        )
+        ON CONFLICT (receipt_number) DO UPDATE SET
+            stock_id = EXCLUDED.stock_id, report_name = EXCLUDED.report_name,
+            submitter_name = EXCLUDED.submitter_name, event_type = EXCLUDED.event_type,
+            detail_url = EXCLUDED.detail_url, received_at = EXCLUDED.received_at,
+            analyzed_summary = COALESCE(EXCLUDED.analyzed_summary, stock_disclosure.analyzed_summary),
+            collected_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+    </insert>
+
+    <select id="findDisclosures" resultType="com.example.invest_mate_ai.stock.vo.StockDisclosureVo">
+        SELECT * FROM stock_disclosure
+        WHERE stock_id = #{stockId} AND received_at BETWEEN #{from} AND #{to}
+        ORDER BY received_at DESC, receipt_number DESC
+        LIMIT #{limit}
+    </select>
+
+    <delete id="deleteDisclosure">
+        DELETE FROM stock_disclosure WHERE id = #{id} AND stock_id = #{stockId}
+    </delete>
+
+    <!-- 한 종목의 같은 사업연도·보고서·재무제표 구분은 최신 수집 값으로 갱신합니다. -->
+    <insert id="upsertFinancial" parameterType="com.example.invest_mate_ai.stock.vo.StockFinancialVo">
+        INSERT INTO stock_financial (
+            stock_id, business_year, report_code, statement_type, revenue, operating_profit,
+            net_income, total_assets, total_liabilities, total_equity, roe, debt_ratio,
+            currency, source_updated_at
+        ) VALUES (
+            #{stockId}, #{businessYear}, #{reportCode}, #{statementType}, #{revenue}, #{operatingProfit},
+            #{netIncome}, #{totalAssets}, #{totalLiabilities}, #{totalEquity}, #{roe}, #{debtRatio},
+            #{currency}, #{sourceUpdatedAt}
+        )
+        ON CONFLICT (stock_id, business_year, report_code, statement_type) DO UPDATE SET
+            revenue = EXCLUDED.revenue, operating_profit = EXCLUDED.operating_profit,
+            net_income = EXCLUDED.net_income, total_assets = EXCLUDED.total_assets,
+            total_liabilities = EXCLUDED.total_liabilities, total_equity = EXCLUDED.total_equity,
+            roe = EXCLUDED.roe, debt_ratio = EXCLUDED.debt_ratio,
+            currency = EXCLUDED.currency, source_updated_at = EXCLUDED.source_updated_at,
+            updated_at = CURRENT_TIMESTAMP
+    </insert>
+
+    <select id="findFinancial" resultType="com.example.invest_mate_ai.stock.vo.StockFinancialVo">
+        SELECT * FROM stock_financial
+        WHERE stock_id = #{stockId} AND business_year = #{businessYear}
+          AND report_code = #{reportCode} AND statement_type = 'CFS'
+    </select>
+
+    <delete id="deleteFinancial">
+        DELETE FROM stock_financial WHERE id = #{id} AND stock_id = #{stockId}
+    </delete>
+
+    <select id="findReportByKey" resultType="com.example.invest_mate_ai.stock.vo.StockReportVo">
+        SELECT id, stock_id, report_date, report_type, report_key, report_status,
+               overview_json::text AS overview_json, news_json::text AS news_json,
+               disclosure_json::text AS disclosure_json, financial_json::text AS financial_json,
+               risk_json::text AS risk_json, technical_json::text AS technical_json,
+               one_line_summary, failure_message, model_name, prompt_version,
+               data_as_of, generated_at, created_at, updated_at
+        FROM stock_report
+        WHERE stock_id = #{stockId} AND report_type = #{reportType} AND report_key = #{reportKey}
+    </select>
+
+    <select id="findReports" resultType="com.example.invest_mate_ai.stock.vo.StockReportVo">
+        SELECT id, stock_id, report_date, report_type, report_key, report_status,
+               overview_json::text AS overview_json, news_json::text AS news_json,
+               disclosure_json::text AS disclosure_json, financial_json::text AS financial_json,
+               risk_json::text AS risk_json, technical_json::text AS technical_json,
+               one_line_summary, failure_message, model_name, prompt_version,
+               data_as_of, generated_at, created_at, updated_at
+        FROM stock_report WHERE stock_id = #{stockId}
+        ORDER BY report_date DESC, generated_at DESC NULLS LAST
+        LIMIT #{limit}
+    </select>
+
+    <!-- report_key로 동일 생성 요청을 멱등 처리하고 완성된 스냅샷을 갱신합니다. -->
+    <insert id="upsertReport" parameterType="com.example.invest_mate_ai.stock.vo.StockReportVo">
+        INSERT INTO stock_report (
+            stock_id, report_date, report_type, report_key, report_status,
+            overview_json, news_json, disclosure_json, financial_json, risk_json, technical_json,
+            one_line_summary, failure_message, model_name, prompt_version, data_as_of, generated_at
+        ) VALUES (
+            #{stockId}, #{reportDate}, #{reportType}, #{reportKey}, #{reportStatus},
+            CAST(#{overviewJson} AS JSONB), CAST(#{newsJson} AS JSONB),
+            CAST(#{disclosureJson} AS JSONB), CAST(#{financialJson} AS JSONB),
+            CAST(#{riskJson} AS JSONB), CAST(#{technicalJson} AS JSONB),
+            #{oneLineSummary}, #{failureMessage}, #{modelName}, #{promptVersion},
+            #{dataAsOf}, #{generatedAt}
+        )
+        ON CONFLICT (stock_id, report_type, report_key) DO UPDATE SET
+            report_date = EXCLUDED.report_date, report_status = EXCLUDED.report_status,
+            overview_json = EXCLUDED.overview_json, news_json = EXCLUDED.news_json,
+            disclosure_json = EXCLUDED.disclosure_json, financial_json = EXCLUDED.financial_json,
+            risk_json = EXCLUDED.risk_json, technical_json = EXCLUDED.technical_json,
+            one_line_summary = EXCLUDED.one_line_summary, failure_message = EXCLUDED.failure_message,
+            model_name = EXCLUDED.model_name, prompt_version = EXCLUDED.prompt_version,
+            data_as_of = EXCLUDED.data_as_of, generated_at = EXCLUDED.generated_at,
+            updated_at = CURRENT_TIMESTAMP
+    </insert>
+
+    <delete id="deleteReport">DELETE FROM stock_report WHERE id = #{id} AND stock_id = #{stockId}</delete>
+</mapper>
